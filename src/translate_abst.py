@@ -3,13 +3,10 @@ import codecs
 import json
 import os
 import time
-from langchain_anthropic import ChatAnthropic
 
 
 def main():
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
-    voyage_api_key = os.getenv("VOYAGE_API_KEY")
-
     client = anthropic.Anthropic(api_key=anthropic_api_key)
     model = "claude-3-haiku-20240307"
 
@@ -36,7 +33,6 @@ def main():
             ]
         )
         output[title] = message.content[0].text
-        # print(message.content[0].text)
         # フリープランのRPMのため
         time.sleep(13)
 
