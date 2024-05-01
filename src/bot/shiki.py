@@ -6,10 +6,7 @@ import os
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 # intentsを設定する必要がある
-intents = discord.Intents.none()
-intents.reactions = True
-intents.guilds = True
-intents.messages = True
+intents = discord.Intents.all()
 
 # 接続に必要なオブジェクトを生成
 client = discord.Client(intents=intents)
