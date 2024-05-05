@@ -1,5 +1,6 @@
 import os
 from langchain_community.document_loaders import JSONLoader
+# from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.vectorstores import FAISS
 from langchain_voyageai import VoyageAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -10,13 +11,14 @@ def main():
     embed_model = "voyage-law-2"
     chunk_size = 1000
     chunk_overlap = 200
-    # client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     embeddigns = VoyageAIEmbeddings(
         voyage_api_key=VOYAGE_API_KEY, model=embed_model)
-    data_path = "../../data/"
+    query = "RAG AND prompt"
+    data_path = f"../../data/{query}/"
     storage_path = "../../storage"
     file = "title_abst_RAG AND prompt.json"
     loader = JSONLoader(os.path.join(data_path, file), jq_schema=".[]")
+    # loader = DirectoryLoader(f"../../data/abst/{query}/", glob="**/*.json")
     data = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size, chunk_overlap=chunk_overlap)

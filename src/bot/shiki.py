@@ -28,13 +28,12 @@ llm_model = "claude-3-opus-20240229"
 embed_model = "voyage-law-2"
 embeddigns = VoyageAIEmbeddings(
     voyage_api_key=VOYAGE_API_KEY, model=embed_model)
-storage_path = "../../storage"
-# file = "title_abst_RAG AND prompt_ja.json"
-file = "title_abst_RAG AND prompt.json"
+storage_path = "../../storage/"
+target = "RAG_AND_prompt"
 llm = ChatAnthropic(api_key=ANTHROPIC_API_KEY,
                     model_name=llm_model)
 vectorstore = FAISS.load_local(
-    folder_path=os.path.join(storage_path, file.replace(".json", "")),
+    folder_path=os.path.join(storage_path, target),
     embeddings=embeddigns,
     allow_dangerous_deserialization=True
 )
@@ -70,28 +69,63 @@ async def on_ready():
 async def greet():
     channel = client.get_channel(CHANNEL_ID)
     await channel.send('hello')
+    pass
 
 
-# mention+"/rag"があれば、RAGが回答
 async def rag(message):
     query = message.content.replace("/rag", "")
     await message.channel.send(chain.invoke(query))
 
-# メッセージ受信時に動作する処理
+# /change: RAG検索対象となるディレクトリを変更する
+
+
+async def change_target(message):
+    global target
+    global vectorstore
+    global retriver
+    global chain
+    before_target = str(target)
+    target = message.content.replace(
+        "/change", "").replace(f"<@{client.user.id}>", "").replace(" ", "")
+    vectorstore = FAISS.load_local(
+        folder_path=os.path.join(storage_path, target),
+        embeddings=embeddigns,
+        allow_dangerous_deserialization=True
+    )
+    retriver = vectorstore.as_retriever()
+    chain = (
+        {"context": retriver, "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+    return before_target, target
+
+# メッセージ受信時の処理
 
 
 @client.event
 async def on_message(message):
+    global target
     # メッセージ送信者がBotだった場合は無視する
     if message.author.bot:
         return
-    # 「/neko」と発言したら「にゃーん」が返る処理
-    if message.content == '/neko':
-        await message.channel.send('にゃーん')
     # botがメンションされた時の動作
     if client.user in message.mentions:
         if '/rag' in message.content:
+            message.channel.send(f"現在の検索対象は{target}です")
             await rag(message)
+        elif '/change' in message.content:
+            before_target, target = await change_target(message)
+            await message.channel.send(f"検索対象を{before_target}から{target}に変更します")
+        elif '/display_all' in message.content:
+            directories = [f for f in os.listdir(
+                storage_path) if os.path.join(storage_path, f)]
+            directories = ", ".join(d for d in directories)
+            await message.channel.send(f"現在、検索可能なディレクトリは{directories}です")
+        elif '/help' in message.content:
+            help_message = "/rag: ragを用いて質問応答が可能\n/change: RAGが検索する論文群を変更できます\n/display_all: 検索可能な論文群の一覧を表示します"
+            await message.channel.send(help_message)
 
 
 # Botの起動とDiscordサーバーへの接続
